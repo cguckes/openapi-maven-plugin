@@ -191,12 +191,7 @@ public class JakartaRsReader extends AstractLibraryReader {
 				final MergedAnnotation requestParamMA = mergedAnnotations.get(
 					ClassLoaderUtils.getByNameRuntimeEx("jakarta.ws.rs.QueryParam"));
 				if(requestParamMA.isPresent()) {
-
-					final boolean isMultipartFile = MultipartFile.class == paramObj.getJavaClass() ||
-						(OpenApiDataType.ARRAY == paramObj.getOpenApiResolvedType().getType()
-							&& MultipartFile.class == paramObj.getArrayItemDataObject().getJavaClass());
-					if(isMultipartFile) {
-						// MultipartFile parameters are considered as a requestBody)
+					if(paramObj.isMultipartFile()) {
 						paramObj.setLocation(ParameterLocation.BODY);
 					} else {
 						paramObj.setLocation(ParameterLocation.QUERY);

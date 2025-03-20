@@ -176,11 +176,7 @@ public class JavaxRsReader extends AstractLibraryReader {
 				// Detect if is a query variable
 				final MergedAnnotation<Annotation> requestParamMA = mergedAnnotations.get("javax.ws.rs.QueryParam");
 				if(requestParamMA.isPresent()) {
-
-					final boolean isMultipartFile = MultipartFile.class == paramObj.getJavaClass() ||
-						(OpenApiDataType.ARRAY == paramObj.getOpenApiResolvedType().getType()
-							&& MultipartFile.class == paramObj.getArrayItemDataObject().getJavaClass());
-					if(isMultipartFile) {
+					if(paramObj.isMultipartFile()) {
 						// MultipartFile parameters are considered as a requestBody)
 						paramObj.setLocation(ParameterLocation.BODY);
 					} else {

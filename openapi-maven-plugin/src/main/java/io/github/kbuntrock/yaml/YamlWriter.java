@@ -305,15 +305,19 @@ public class YamlWriter {
 				final List<ParameterObject> bodies = endpoint.getParameters().stream()
 					.filter(x -> ParameterLocation.BODY == x.getLocation())
 					.collect(Collectors.toList());
-				if(bodies.size() > 1) {
+				if(bodies.size() > 1 && !isFormData(bodies)) {
 					logger.warn("More than one body is not allowed : "
 						+ endpoint.getPath() + " - " + endpoint.getType());
 				}
 				if(!bodies.isEmpty()) {
-					final ParameterObject body = bodies.get(0);
 					final RequestBody requestBody = new RequestBody();
 					operation.setRequestBody(requestBody);
-					final Content requestBodyContent = Content.fromDataObject(body);
+
+					final ParameterObject body = bodies.get(0);
+					final Content requestBodyContent = isFormData(bodies)
+					 	? Content.fromMultipartBodies(bodies)
+						: Content.fromDataObject(body);
+
 					if(body.getFormats() != null) {
 						for(final String format : body.getFormats()) {
 							requestBody.getContent().put(format, requestBodyContent);
@@ -395,6 +399,10 @@ public class YamlWriter {
 
 		}
 		return paths;
+	}
+
+	private static boolean isFormData(List<ParameterObject> bodies) {
+		return bodies.stream().allMatch(ParameterObject::isMultipartFile);
 	}
 
 	private Map<String, Object> createSchemaSection(final TagLibrary library) {

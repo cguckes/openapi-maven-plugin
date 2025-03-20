@@ -1,8 +1,10 @@
 package io.github.kbuntrock.model;
 
+import io.github.kbuntrock.utils.OpenApiDataType;
 import io.github.kbuntrock.utils.ParameterLocation;
 import java.lang.reflect.Type;
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public class ParameterObject extends DataObject {
 
@@ -82,5 +84,11 @@ public class ParameterObject extends DataObject {
 
 	public void setJavadocFieldName(final String javadocFieldName) {
 		this.javadocFieldName = javadocFieldName;
+	}
+
+	public boolean isMultipartFile(){
+		return MultipartFile.class == getJavaClass() ||
+			(OpenApiDataType.ARRAY == getOpenApiResolvedType().getType()
+				&& MultipartFile.class == getArrayItemDataObject().getJavaClass());
 	}
 }

@@ -2,42 +2,31 @@ package io.github.kbuntrock.yaml.model;
 
 import io.github.kbuntrock.model.DataObject;
 import io.github.kbuntrock.model.ParameterObject;
-import io.github.kbuntrock.utils.OpenApiDataType;
 import io.github.kbuntrock.utils.OpenApiTypeResolver;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
-import org.springframework.web.multipart.MultipartFile;
+import java.util.stream.Collectors;
 
 public class Content {
-
 	private Schema schema;
 
-	public static Content fromDataObject(final ParameterObject parameterObject) {
+	public static Content fromMultipartBodies(final List<ParameterObject> parameterObjects){
+		final Content content = new Content();
 
-		final Content content = fromDataObject((DataObject) parameterObject);
+		content.schema = new Schema();
+		content.schema.setType(OpenApiTypeResolver.OBJECT_TYPE);
+		content.schema.setRequired(
+			parameterObjects.stream()
+				.filter(ParameterObject::isRequired)
+				.map(ParameterObject::getName)
+				.collect(Collectors.toList()));
 
-		final boolean isMultipartFile = MultipartFile.class == parameterObject.getJavaClass() ||
-			(OpenApiDataType.ARRAY == parameterObject.getOpenApiResolvedType().getType()
-				&& MultipartFile.class == parameterObject.getArrayItemDataObject().getJavaClass());
+		content.schema.properties = parameterObjects.stream()
+			.collect(Collectors.toMap(
+				ParameterObject::getName,
+				po-> new Property(fromDataObject((DataObject) po).schema)));
 
-		if(isMultipartFile) {
-			// the MultipartFile must be named in the body.
-			final Content multipartContent = new Content();
-			final Schema schema = new Schema();
-			multipartContent.schema = schema;
-			if(parameterObject.isRequired()) {
-				schema.setRequired(Collections.singletonList(parameterObject.getName()));
-			}
-			schema.setType(OpenApiTypeResolver.OBJECT_TYPE);
-			final Map<String, Property> propertyMap = new LinkedHashMap<>();
-			schema.setProperties(propertyMap);
-			final Property property = new Property(content.getSchema());
-			propertyMap.put(parameterObject.getName(), property);
-			return multipartContent;
-		}
 		return content;
 	}
 
@@ -54,5 +43,4 @@ public class Content {
 	public Schema getSchema() {
 		return schema;
 	}
-
 }
