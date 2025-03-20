@@ -196,10 +196,7 @@ public class SpringMvcReader extends AstractLibraryReader {
 				final MergedAnnotation<RequestParam> requestParamMA = mergedAnnotations.get(RequestParam.class);
 				if(requestParamMA.isPresent()) {
 					annotationFound = true;
-					final boolean isMultipartFile = MultipartFile.class == paramObj.getJavaClass() ||
-						(OpenApiDataType.ARRAY == paramObj.getOpenApiResolvedType().getType()
-							&& MultipartFile.class == paramObj.getArrayItemDataObject().getJavaClass());
-					if(isMultipartFile) {
+					if(paramObj.isMultipartFile()) {
 						// MultipartFile parameters are considered as a requestBody)
 						paramObj.setLocation(ParameterLocation.BODY);
 					} else {
