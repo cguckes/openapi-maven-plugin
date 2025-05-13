@@ -8,6 +8,19 @@ servers:
 tags:
   - name: StreamResponseController
 paths:
+  /api/stream/byte-array:
+    get:
+      tags:
+        - StreamResponseController
+      operationId: getByteArray
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
   /api/stream/stream:
     get:
       tags:

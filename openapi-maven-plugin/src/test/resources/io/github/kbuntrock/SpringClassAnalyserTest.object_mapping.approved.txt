@@ -8,6 +8,19 @@ servers:
 tags:
   - name: MappingObject
 paths:
+  /mapping-object/non-wrapped-object-map:
+    get:
+      tags:
+        - MappingObject
+      operationId: getNonWrappedObjectMap
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
   /mapping-object/object:
     get:
       tags:
