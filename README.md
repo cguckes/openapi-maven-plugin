@@ -2,7 +2,7 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.kbuntrock/openapi-maven-plugin.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.kbuntrock/openapi-maven-plugin)
 [![CircleCI](https://circleci.com/gh/kbuntrock/openapi-maven-plugin/tree/dev.svg?style=shield)](https://circleci.com/gh/kbuntrock/openapi-maven-plugin/tree/dev)
-![Coverage](.github/badges/jacoco.svg)
+![Coverage](../badges/jacoco.svg)
 ![GitHub](https://img.shields.io/github/license/kbuntrock/openapi-maven-plugin?color=blue)
 
 The openapi maven plugin analyse Rest controller java classes and generate the corresponding openapi 3.0.3 documentation. It supports Spring MVC, Javax RS and Jakarta RS annotations.
