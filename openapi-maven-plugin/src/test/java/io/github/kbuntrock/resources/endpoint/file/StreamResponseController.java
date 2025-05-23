@@ -14,4 +14,7 @@ public interface StreamResponseController {
 
 	@GetMapping(value = "/stream", produces = "application/octet-stream")
 	ResponseEntity<Resource> getStream();
+
+	@GetMapping(value = "/byte-array", produces = "application/octet-stream")
+	ResponseEntity<byte[]> getByteArray();
 }

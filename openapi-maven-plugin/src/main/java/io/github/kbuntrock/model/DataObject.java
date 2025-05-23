@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.reflect.TypeUtils;
 import org.springframework.util.ReflectionUtils;
 
 /**
@@ -86,7 +85,7 @@ public class DataObject {
 	private Boolean classRequired;
 
 	/**
-	 * Shallow copy for Parameter Oject creation
+	 * Shallow copy for Parameter Object creation
 	 *
 	 * @param dataObject
 	 */
@@ -161,7 +160,7 @@ public class DataObject {
 					this.arrayItemDataObject = new DataObject(clazz);
 				} else {
 					throw new RuntimeException(
-						"A GenericArrayType with a " + gat.getGenericComponentType().getClass().toString() + " is not and handled case.");
+						"A GenericArrayType with a " + gat.getGenericComponentType().getClass() + " is not and handled case.");
 				}
 			} else if(type instanceof Class) {
 				javaClass = (Class<?>) type;
@@ -197,7 +196,7 @@ public class DataObject {
 				}
 
 
-			} else if(javaClass.isArray() && !genericallyTyped) {
+			} else if(javaClass.isArray() && !genericallyTyped && javaClass != byte[].class) {
 				arrayItemDataObject = new DataObject(javaClass.getComponentType());
 			}
 

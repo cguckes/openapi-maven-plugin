@@ -16,6 +16,7 @@ equality:
   java.time.LocalDate: string-date
   java.time.LocalTime: string-time
   java.util.UUID: string-uuid
+  "byte[]": string-binary
   java.lang.Object: any
 assignability:
   java.io.InputStream: string-binary
