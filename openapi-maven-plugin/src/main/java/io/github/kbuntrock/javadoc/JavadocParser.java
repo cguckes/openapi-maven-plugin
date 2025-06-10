@@ -7,7 +7,6 @@ import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.EnumConstantDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
@@ -55,8 +54,7 @@ public class JavadocParser {
 			charset = Charset.forName(javadocConfiguration.getEncoding());
 		} else {
 			logger.warn("Encoding " + javadocConfiguration.getEncoding() + " is not supported. UTF-8 will be used instead.");
-			logger.warn("Supported encoding on this JVM are : " + Charset.availableCharsets().keySet().stream()
-				.collect(Collectors.joining(", ")));
+			logger.warn("Supported encoding on this JVM are : " + String.join(", ", Charset.availableCharsets().keySet()));
 		}
 		parserConfiguration.setCharacterEncoding(charset);
 		debugScan = javadocConfiguration.isDebugScan();
@@ -87,10 +85,12 @@ public class JavadocParser {
 			logger.debug("-------- PRINT JAVADOC SCAN RESULTS ----------");
 			for(final ClassDocumentation classDocumentation : javadocMap.values()) {
 				logger.debug("Class documentation for : " + classDocumentation.getCompleteName());
+				logger.debug("Summary : " + classDocumentation.getSummary());
 				logger.debug("Description : " + classDocumentation.getDescription());
 				if(!classDocumentation.getMethodsJavadoc().isEmpty()) {
 					for(final Entry<String, JavadocWrapper> entry : classDocumentation.getMethodsJavadoc().entrySet()) {
 						logger.debug("Method doc for : " + entry.getKey());
+						logger.debug("Summary : " + entry.getValue().getSummary());
 						logger.debug("Description : " + entry.getValue().getDescription());
 						entry.getValue().printParameters();
 						entry.getValue().printReturn();

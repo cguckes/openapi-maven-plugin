@@ -140,26 +140,23 @@ public class YamlWriter {
 		specification.setTags(tagLibrary.getSortedTags().stream()
 			.map(x -> {
 				if(JavadocMap.INSTANCE.isPresent()) {
-					ClassDocumentation classDocumentation = JavadocMap.INSTANCE.getJavadocMap().get(x.getClazz().getCanonicalName());
+					ClassDocumentation classDocumentation = JavadocMap.INSTANCE.getJavadocMap()
+						.computeIfAbsent(x.getClazz().getCanonicalName(),
+							k -> new ClassDocumentation(x.getClazz().getCanonicalName(), x.getClazz().getSimpleName()));
 					// Even if there is no declared class documentation, we may enhance it with javadoc on interface and/or abstract classes
-					if(classDocumentation == null) {
-						classDocumentation = new ClassDocumentation(x.getClazz().getCanonicalName(), x.getClazz().getSimpleName());
-						JavadocMap.INSTANCE.getJavadocMap().put(x.getClazz().getCanonicalName(), classDocumentation);
-					}
-					logger.debug(
-						"Class documentation found for tag " + x.getClazz().getSimpleName() + " ? " + (classDocumentation != null));
+					logger.debug("Class documentation found for tag " + x.getClazz().getSimpleName());
 
 					classDocumentation.inheritanceEnhancement(x.getClazz(), ClassDocumentation.EnhancementType.METHODS);
-					final Optional<String> description = classDocumentation.getDescription();
-					if(description.isPresent()) {
-						return new TagElement(x.computeConfiguredName(apiConfiguration), description.get());
-					}
+					return new TagElement(
+						x.computeConfiguredName(apiConfiguration),
+						classDocumentation.getSummary().orElse(null),
+						classDocumentation.getDescription().orElse(null));
 				}
 
-				return new TagElement(x.computeConfiguredName(apiConfiguration), null);
+				return new TagElement(x.computeConfiguredName(apiConfiguration), null, null);
 			}).collect(Collectors.toList()));
 
-		// Write the "paths" section (all url / http verbs combinaison scanned)
+		// Write the "paths" section (all url / http verbs combination scanned)
 		specification.setPaths(createPaths(tagLibrary));
 
 		final Map<String, Object> schemaSection = createSchemaSection(tagLibrary);
@@ -229,8 +226,8 @@ public class YamlWriter {
 				final String computedTagName = tag.computeConfiguredName(apiConfiguration);
 				operation.getTags().add(computedTagName);
 				operation.setOperationId(ObjectsUtils.nonNullElse(endpoint.getOperationAnnotationInfo().getOperationId(),
-						apiConfiguration.getOperationIdHelper().toOperationId(tag.getName(), computedTagName, endpoint.getName()))
-					);
+					apiConfiguration.getOperationIdHelper().toOperationId(tag.getName(), computedTagName, endpoint.getName()))
+				);
 				if(apiConfiguration.isLoopbackOperationName()) {
 					operation.setLoopbackOperationName(endpoint.getName());
 				}
@@ -251,12 +248,16 @@ public class YamlWriter {
 					operation.setDescription(endpoint.getOperationAnnotationInfo().getDescription());
 				} else {
 					if(methodJavadoc != null) {
-						operation.setDescription(methodJavadoc.getJavadoc().getDescription().toText());
+						operation.setDescription(methodJavadoc.getDescription().orElse(null));
 					}
 				}
 
-				if(endpoint.getOperationAnnotationInfo().getDescription() != null) {
+				if(endpoint.getOperationAnnotationInfo().getSummary() != null) {
 					operation.setSummary(endpoint.getOperationAnnotationInfo().getSummary());
+				} else {
+					if(methodJavadoc != null) {
+						operation.setSummary(methodJavadoc.getSummary().orElse(null));
+					}
 				}
 
 				// Warning on paths
@@ -276,7 +277,8 @@ public class YamlWriter {
 
 				// All parameters which are not in the body
 				for(final ParameterObject parameter : endpoint.getParameters().stream()
-					.filter(x -> ParameterLocation.BODY != x.getLocation() && ParameterLocation.BODY_PART != x.getLocation()).collect(Collectors.toList())) {
+					.filter(x -> ParameterLocation.BODY != x.getLocation() && ParameterLocation.BODY_PART != x.getLocation())
+					.collect(Collectors.toList())) {
 					final ParameterElement parameterElement = new ParameterElement();
 					parameterElement.setName(parameter.getName());
 					parameterElement.setIn(parameter.getLocation().toString().toLowerCase(Locale.ENGLISH));
@@ -293,8 +295,8 @@ public class YamlWriter {
 					}
 					parameterElement.setSchema(schema);
 
-
-					if(parameter.getJavaClass() == Object.class && parameter.isAllowEmptyValue() && parameter.getLocation() == ParameterLocation.QUERY) {
+					if(parameter.getJavaClass() == Object.class && parameter.isAllowEmptyValue()
+						&& parameter.getLocation() == ParameterLocation.QUERY) {
 						parameterElement.setSchema(null);
 					}
 
@@ -324,6 +326,9 @@ public class YamlWriter {
 							if(javadocParamWrapper != null) {
 								final Optional<String> desc = javadocParamWrapper.getDescription();
 								parameterElement.setDescription(desc.get());
+
+								final Optional<String> summary = javadocParamWrapper.getSummary();
+								parameterElement.setSummary(summary.orElse(null));
 							}
 						}
 					}
@@ -345,7 +350,7 @@ public class YamlWriter {
 
 					final ParameterObject body = bodies.get(0);
 					final Content requestBodyContent = isFormData(bodies)
-					 	? Content.fromMultipartBodies(bodies)
+						? Content.fromMultipartBodies(bodies)
 						: Content.fromDataObject(body);
 
 					if(body.getFormats() != null) {
@@ -444,10 +449,11 @@ public class YamlWriter {
 
 	/**
 	 * Check if a common operation exist and merge it if possible
-	 * @param tag the tag to document
-	 * @param paths the already documented paths in this tag
+	 *
+	 * @param tag       the tag to document
+	 * @param paths     the already documented paths in this tag
 	 * @param operation the current operation to document
-	 * @param response the current operation response (without the default ones)
+	 * @param response  the current operation response (without the default ones)
 	 */
 	private void mergeCommonOperations(Tag tag, Map<String, Map<String, Operation>> paths, Operation operation, Response response) {
 		// Check if on operation already exist for this name (GET / POST / ...) and path
@@ -458,7 +464,7 @@ public class YamlWriter {
 			// Check if there is a collision in response content type.
 			Object existingContent = existingOperation.getResponses().get(response.getCode());
 			for(Entry<String, Content> responseContent : response.getContent().entrySet()) {
-				if(existingContent instanceof Response ) {
+				if(existingContent instanceof Response) {
 					Response existingResponse = (Response) existingContent;
 					if(existingResponse.getContent().containsKey(responseContent.getKey())) {
 						// There are too many cases: this is uncommon, but it might be a valid case.
@@ -482,13 +488,15 @@ public class YamlWriter {
 				}
 			}
 			// Now merging parameters
-			Map<String, ParameterElement> existingParametersByNames = existingOperation.getParameters().stream().collect(Collectors.toMap(ParameterElement::getName, Function.identity()));
+			Map<String, ParameterElement> existingParametersByNames = existingOperation.getParameters().stream()
+				.collect(Collectors.toMap(ParameterElement::getName, Function.identity()));
 			for(ParameterElement parameter : operation.getParameters()) {
 				ParameterElement existingParameter = existingParametersByNames.get(parameter.getName());
 				if(existingParameter == null) {
 					existingOperation.getParameters().add(parameter);
 				} else {
-					if(!existingParameter.getSchema().getType().getNode().toString().equals(parameter.getSchema().getType().getNode().toString())) {
+					if(!existingParameter.getSchema().getType().getNode().toString()
+						.equals(parameter.getSchema().getType().getNode().toString())) {
 						Logger.INSTANCE.getLogger().warn("Parameters incoherences detected in path " + operation.getPath());
 					}
 				}

@@ -170,11 +170,12 @@ public class ClassDocumentation {
 		return methodsJavadoc;
 	}
 
+	public Optional<String> getSummary() {
+		return Optional.ofNullable(javadocWrapper).flatMap(JavadocWrapper::getSummary);
+	}
+
 	public Optional<String> getDescription() {
-		if(javadocWrapper != null) {
-			return javadocWrapper.getDescription();
-		}
-		return Optional.empty();
+		return Optional.ofNullable(javadocWrapper).flatMap(JavadocWrapper::getDescription);
 	}
 
 	@Override
