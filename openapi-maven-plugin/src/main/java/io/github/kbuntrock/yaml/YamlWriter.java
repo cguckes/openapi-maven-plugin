@@ -20,6 +20,7 @@ import io.github.kbuntrock.model.DataObject;
 import io.github.kbuntrock.model.Endpoint;
 import io.github.kbuntrock.model.ParameterObject;
 import io.github.kbuntrock.model.Tag;
+import io.github.kbuntrock.model.annotation.OperationResponse;
 import io.github.kbuntrock.reflection.AdditionnalSchemaLibrary;
 import io.github.kbuntrock.utils.Logger;
 import io.github.kbuntrock.utils.ObjectsUtils;
@@ -429,6 +430,33 @@ public class YamlWriter {
 						operation.getResponses().put(entry.getKey(), entry.getValue());
 					});
 				}
+
+				// Add swagger documented responses
+				for (final OperationResponse operationResponse : endpoint.getOperationAnnotationInfo().getResponses()) {
+					// Check if response code is already documented, if so, we merge the attributes
+					Response annotatedResponse = null;
+					Object additionalResponseObject = operation.getResponses().get(operationResponse.getCode());
+					if (additionalResponseObject != null && additionalResponseObject instanceof Response) {
+						annotatedResponse = (Response) additionalResponseObject;
+					} else {
+						annotatedResponse = new Response();
+					}
+
+					annotatedResponse.setCode(operationResponse.getCode(), apiConfiguration.getDefaultSuccessfulOperationDescription());
+					if (operationResponse.getDescription() != null) {
+						annotatedResponse.setDescription(operationResponse.getDescription());
+					}
+					if (operationResponse.getDataObject() != null) {
+						final Content responseContent = Content.fromDataObject(operationResponse.getDataObject());
+						if (apiConfiguration.isDefaultProduceConsumeGuessing()) {
+							annotatedResponse.getContent().put(ProduceConsumeUtils.getDefaultValue(operationResponse.getDataObject()), responseContent);
+						} else {
+							annotatedResponse.getContent().put("*/*", responseContent);
+						}
+					}
+					operation.getResponses().put(annotatedResponse.getCode(), annotatedResponse);
+				}
+
 				// Check if on operation already exist for this name (GET / POST / ...) and path
 				// If a similar operation exists, we could merge it if the return content type don't overlap.
 				mergeCommonOperations(tag, paths, operation, response);
