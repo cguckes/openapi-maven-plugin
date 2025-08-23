@@ -1,5 +1,54 @@
 # 🚀 Comment démarrer
 
+Ce plugin peut être utilisé de deux manières différentes, selon vos besoins :
+
+**Mode ligne de commande** : La façon la plus rapide de découvrir ce plugin est de l’invoquer directement depuis la ligne de commande.  
+Ce mode est idéal pour tester rapidement si le plugin s’intègre correctement à votre projet.
+Il n’offre cependant que des possibilités limitées de configuration.
+Pour une personnalisation complète et une utilisation plus fluide, il est recommandé de configurer le plugin directement dans votre ``pom.xml``.
+
+**Configuration via le pom.xml** : Définir le plugin directement dans votre pom.xml est l’approche la plus courante et la plus pratique pour une utilisation quotidienne.
+Cette méthode offre un ensemble complet d’options de configuration, ce qui facilite l’adaptation du plugin aux besoins de votre projet.
+
+---
+## ⚡ Command Line
+
+La façon la plus rapide de générer une documentation est d’invoquer directement le plugin via la ligne de commande : 
+
+```
+mvn clean compile io.github.kbuntrock:openapi-maven-plugin:0.0.25-SNAPSHOT:documentation \
+"-Dmaven.compiler.parameters=true" \
+"-Dopenapi.library=SPRING_MVC" \
+"-Dopenapi.tagAnnotations=RequestMapping" \
+"-Dopenapi.locations=your.base.package"
+```
+
+🔎 Décomposition de la commande :
+- ``clean compile "-Dmaven.compiler.parameters=true"``:  
+  Nettoie les sorties de build précédentes et recompile le projet en conservant les noms des paramètres (nécessaire pour la réflexion).
+- ``-Dopenapi.library=SPRING_MVC``:  
+  Spécifie le framework que vous utilisez. Valeurs possibles :
+    - ``SPRING_MVC`` (par défaut)
+    - ``JAKARTA_RS``
+    - ``JAVAX_RS``
+- ``-Dopenapi.locations=your.base.package``:  
+  Définit les packages à scanner pour détecter les endpoints REST.
+    - Obligatoire pour des raisons de performance.
+    - Plusieurs packages peuvent être fournis, séparés par des virgules (ex. -Dopenapi.locations=pkgone,pkgtwo).
+- ``-Dopenapi.tagAnnotations=RequestMapping``:  
+  Spécifie quelle annotation doit être utilisée pour détecter les endpoints. Cette propriété peut être omise si vous n’utilisez pas Spring.  
+  Valeurs possibles :
+    - ``RestController`` (par défaut)
+    - ``RequestMapping``
+
+?> Une liste détaillée des paramètres disponibles est documentée [ici](fr/command_line.md)
+  
+!> Le mode ligne de commande est idéal pour tester rapidement si le plugin s’intègre correctement à votre projet.
+Cependant, il offre des possibilités de configuration limitées. Pour une personnalisation complète et un usage simplifié, il est recommandé de configurer le plugin directement dans votre ``pom.xml`` (voir la section suivante).
+
+---
+## 🍏 Configuration de votre pom.xml
+
 Pour commencer, il est nécessaire de configurer votre build Maven afin de conserver les noms des paramètres des méthodes Java.  
 Sans cette étape, les paramètres apparaîtront dans la documentation sous forme de ``arg0``, ``arg1``, etc.
 
