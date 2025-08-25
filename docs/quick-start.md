@@ -15,7 +15,7 @@ This method offers a complete set of configuration options, making it easier to 
 The quickest way to generate a documentation is to directly invoke the plugin via the command line:
 
 ```
-mvn clean compile io.github.kbuntrock:openapi-maven-plugin:0.0.25-SNAPSHOT:documentation \
+mvn clean compile io.github.kbuntrock:openapi-maven-plugin:0.0.25:documentation \
 "-Dmaven.compiler.parameters=true" \
 "-Dopenapi.library=SPRING_MVC" \
 "-Dopenapi.tagAnnotations=RequestMapping" \
@@ -83,7 +83,7 @@ Next, add the openapi-maven-plugin and adjust the configuration values as needed
 <plugin>
 	<groupId>io.github.kbuntrock</groupId>
 	<artifactId>openapi-maven-plugin</artifactId>
-	<version>0.0.25-SNAPSHOT</version>
+	<version>0.0.25</version>
 	<executions>
 		<execution>
 			<id>documentation</id>
