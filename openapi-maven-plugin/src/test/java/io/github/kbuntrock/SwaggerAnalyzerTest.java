@@ -62,7 +62,7 @@ public class SwaggerAnalyzerTest extends AbstractTest {
 	public void basicAnnotatedAndJavadocResponseWithReturnObjects() throws MojoFailureException, IOException, MojoExecutionException {
 		final DocumentationMojo mojo = createBasicMojo(EntityAnnotationResource.class.getCanonicalName());
 		JavadocConfiguration javadocConfiguration = new JavadocConfiguration();
-		javadocConfiguration.setScanLocations(List.of("src/test/java/io/github/kbuntrock/resources/endpoint/swagger"));
+		javadocConfiguration.setScanLocations(Collections.singletonList("src/test/java/io/github/kbuntrock/resources/endpoint/swagger"));
 		mojo.setJavadocConfiguration(javadocConfiguration);
 		checkGenerationResult(mojo.documentProject());
 	}

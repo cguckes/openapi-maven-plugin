@@ -16,8 +16,10 @@ Les annotations et champs actuellement pris en charge sont :
   - schema (``io.swagger.v3.oas.annotations.media.Schema``)
 - io.swagger.v3.oas.annotations.media.Schema
   - implementation (``Class<?>``)
+  - description (``String``)
+  - example (``String``)
 
-## Exemple
+## Exemples
 
 ```java
 @Operation(summary = "Swagger summary",
@@ -30,5 +32,15 @@ Les annotations et champs actuellement pris en charge sont :
 @GetMapping("/some-api")
 public ResponseEntity<String> myFunction() {
     return ResponseEntity.ok("returnValue");
+}
+```
+---
+```java
+public class ErrorDto {
+    
+	@Schema(description = "Timestamp of the error", example = "2023-10-01T12:00:00")
+	private LocalDateTime timestamp;
+	@Schema(description = "Session ID associated with the error", example = "session-12345")
+	private String sessionId;
 }
 ```

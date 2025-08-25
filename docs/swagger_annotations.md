@@ -16,8 +16,10 @@ Supported annotations and fields currently are:
   - schema (``io.swagger.v3.oas.annotations.media.Schema``)
 - io.swagger.v3.oas.annotations.media.Schema
   - implementation (``Class<?>``)
+  - description (``String``)
+  - example (``String``)
 
-## Example
+## Examples
 
 ```java
 @Operation(summary = "Swagger summary",
@@ -30,5 +32,15 @@ Supported annotations and fields currently are:
 @GetMapping("/some-api")
 public ResponseEntity<String> myFunction() {
     return ResponseEntity.ok("returnValue");
+}
+```
+---
+```java
+public class ErrorDto {
+    
+	@Schema(description = "Timestamp of the error", example = "2023-10-01T12:00:00")
+	private LocalDateTime timestamp;
+	@Schema(description = "Session ID associated with the error", example = "session-12345")
+	private String sessionId;
 }
 ```
