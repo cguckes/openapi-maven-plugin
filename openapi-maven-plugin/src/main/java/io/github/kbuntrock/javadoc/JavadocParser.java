@@ -150,7 +150,7 @@ public class JavadocParser {
 		} else if(commentedNode.hasParentNode() && commentedNode.getParentNode().get() instanceof EnumDeclaration) {
 			enumDeclaration = (EnumDeclaration) commentedNode.getParentNode().get();
 		}
-		if(enumDeclaration != null) {
+		if(enumDeclaration != null && enumDeclaration.getFullyQualifiedName().isPresent()) {
 			final EnumDeclaration dec = enumDeclaration;
 			return Optional.of(javadocMap.computeIfAbsent(dec.getFullyQualifiedName().get(),
 				key -> new ClassDocumentation(dec.getFullyQualifiedName().get(), dec.getName().asString())));
