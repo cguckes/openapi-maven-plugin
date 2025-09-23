@@ -7,7 +7,6 @@ import io.github.kbuntrock.model.Endpoint;
 import io.github.kbuntrock.model.OperationType;
 import io.github.kbuntrock.model.ParameterObject;
 import io.github.kbuntrock.model.Tag;
-import io.github.kbuntrock.utils.OpenApiDataType;
 import io.github.kbuntrock.utils.OpenApiTypeResolver;
 import io.github.kbuntrock.utils.ParameterLocation;
 import java.lang.annotation.Annotation;
@@ -29,7 +28,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.multipart.MultipartFile;
 
 public class JakartaRsReader extends AstractLibraryReader {
 
@@ -43,8 +41,8 @@ public class JakartaRsReader extends AstractLibraryReader {
 	private Class jakartaHttpServletRequest;
 	private Class responseAnnotation;
 
-	public JakartaRsReader(final ApiConfiguration apiConfiguration) {
-		super(apiConfiguration);
+	public JakartaRsReader(final ApiConfiguration apiConfiguration, final OpenApiTypeResolver openApiTypeResolver) {
+		super(apiConfiguration, openApiTypeResolver);
 		initClasses();
 	}
 
@@ -110,7 +108,7 @@ public class JakartaRsReader extends AstractLibraryReader {
 			for(final JakartaRsHttpVerb verb : JakartaRsHttpVerb.values()) {
 				final MergedAnnotation m = mergedAnnotations.get(verb.getAnnotationClass());
 				if(m.isPresent()) {
-					final String methodIdentifier = JavaClassAnalyser.createIdentifier(method);
+					final String methodIdentifier = JavaClassAnalyser.createMethodIdentifier(method);
 					final List<ParameterObject> parameterObjects = readParameters(clazz, method, mergedAnnotations);
 					final DataObject responseObject = readResponseObject(clazz, method, mergedAnnotations);
 					final int responseCode = readResponseCode(null);
@@ -152,13 +150,13 @@ public class JakartaRsReader extends AstractLibraryReader {
 				final MergedAnnotations mergedAnnotations = MergedAnnotations.from(parameter,
 					MergedAnnotations.SearchStrategy.TYPE_HIERARCHY);
 
-				if(!OpenApiTypeResolver.INSTANCE.canBeDocumented(parameter, mergedAnnotations)) {
+				if(!openApiTypeResolver.canBeDocumented(parameter, mergedAnnotations)) {
 					continue;
 				}
 				logger.debug("Parameter : " + parameter.getName());
 
 				ParameterObject paramObj = new ParameterObject(parameter.getName(),
-					genericityResolver.resolve(clazz, parameter.getParameterizedType()));
+					genericityResolver.resolve(clazz, parameter.getParameterizedType()), openApiTypeResolver);
 				paramObj = unwrapParameterObject(paramObj);
 
 				if(mergedAnnotations.get(jakartaBeanParam).isPresent()) {

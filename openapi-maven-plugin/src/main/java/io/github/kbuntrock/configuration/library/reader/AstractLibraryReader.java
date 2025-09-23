@@ -6,19 +6,19 @@ import io.github.kbuntrock.model.Endpoint;
 import io.github.kbuntrock.model.ParameterObject;
 import io.github.kbuntrock.model.Tag;
 import io.github.kbuntrock.model.annotation.OperationAnnotationInfo;
+import io.github.kbuntrock.model.annotation.OperationResponse;
 import io.github.kbuntrock.reflection.GenericityResolver;
 import io.github.kbuntrock.utils.Logger;
 import io.github.kbuntrock.utils.OpenApiTypeResolver;
-import io.github.kbuntrock.utils.ParameterLocation;
 import io.github.kbuntrock.utils.UnwrappingType;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -26,7 +26,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 public abstract class AstractLibraryReader {
 
@@ -35,8 +34,11 @@ public abstract class AstractLibraryReader {
 	protected final ApiConfiguration apiConfiguration;
 	protected final GenericityResolver genericityResolver = new GenericityResolver();
 
-	public AstractLibraryReader(final ApiConfiguration apiConfiguration) {
+	protected final OpenApiTypeResolver openApiTypeResolver;
+
+	public AstractLibraryReader(final ApiConfiguration apiConfiguration, final OpenApiTypeResolver openApiTypeResolver) {
 		this.apiConfiguration = apiConfiguration;
+		this.openApiTypeResolver = openApiTypeResolver;
 	}
 
 	protected static String concatenateBasePathAndMethodPath(final String basePath, final String methodPath,
@@ -61,7 +63,7 @@ public abstract class AstractLibraryReader {
 		}
 
 		DataObject dataObject = new DataObject(
-			genericityResolver.resolve(clazz, readResponseMethodType(method, mergedAnnotations)));
+			genericityResolver.resolve(clazz, readResponseMethodType(method, mergedAnnotations)), openApiTypeResolver);
 		dataObject = computeFrameworkReturnObject(dataObject);
 		logger.debug(dataObject.toString());
 		return dataObject;
@@ -79,7 +81,7 @@ public abstract class AstractLibraryReader {
 	 * @return return DataObject
 	 */
 	private DataObject computeFrameworkReturnObject(final DataObject dataObject) {
-		return OpenApiTypeResolver.INSTANCE.unwrapDataObject(dataObject, UnwrappingType.RESPONSE);
+		return openApiTypeResolver.unwrapDataObject(dataObject, UnwrappingType.RESPONSE);
 	}
 
 	protected boolean isDeprecated(final Method originalMethod) {
@@ -108,7 +110,7 @@ public abstract class AstractLibraryReader {
 	protected abstract int readResponseCode(MergedAnnotations mergedAnnotations);
 
 	protected ParameterObject unwrapParameterObject(final ParameterObject parameterObject) {
-		final DataObject dataObject = OpenApiTypeResolver.INSTANCE.unwrapDataObject(parameterObject, UnwrappingType.PARAMETER);
+		final DataObject dataObject = openApiTypeResolver.unwrapDataObject(parameterObject, UnwrappingType.PARAMETER);
 		// Pointer equality is intentional
 		if(parameterObject == dataObject) {
 			return parameterObject;
@@ -133,6 +135,48 @@ public abstract class AstractLibraryReader {
 			final String description = operationAnnotation.getString("description");
 			if(!StringUtils.isEmpty(description)) {
 				operationInfo.setDescription(description);
+			}
+
+			MergedAnnotation<Annotation>[] responseArray = operationAnnotation.getAnnotationArray("responses", Annotation.class);
+
+			for (MergedAnnotation<Annotation> responseAnnotation : responseArray) {
+				final OperationResponse operationResponse = new OperationResponse();
+				final String responseCode = responseAnnotation.getString("responseCode");
+
+				if ("default".equals(responseCode)) {
+					operationResponse.setCode(200);
+				} else {
+					try {
+						operationResponse.setCode(Integer.parseInt(responseCode));
+					} catch (NumberFormatException e) {
+						logger.warn("Invalid response code '" + responseCode + "' for operation " + operationInfo.getOperationId() + ". Skipping response.");
+						continue;
+					}
+				}
+
+
+				final String responseDescription = responseAnnotation.getString("description");
+				if (!StringUtils.isEmpty(responseDescription)) {
+					operationResponse.setDescription(responseDescription);
+				}
+
+				final MergedAnnotation<Annotation>[] contentArray = responseAnnotation.getAnnotationArray("content", Annotation.class);
+				if (contentArray.length > 1) {
+					logger.warn("Multiple content annotations found for response code " + responseCode + " and operation " + operationInfo.getOperationId() + ". Only the first one will be used.");
+				}
+				Optional<MergedAnnotation<Annotation>> optionalContent = Arrays.stream(contentArray).findFirst();
+				if (optionalContent.isPresent()) {
+					final MergedAnnotation<Annotation> content = optionalContent.get();
+					final MergedAnnotation<Annotation> schema = content.getAnnotation("schema", Annotation.class);
+					if (schema.isPresent()) {
+						final Class<?> implementation = schema.getClass("implementation");
+						if (implementation != null && !Void.class.equals(implementation) && !Void.TYPE.equals(implementation)) {
+							final DataObject responseObject = new DataObject(implementation, openApiTypeResolver);
+							operationResponse.setDataObject(responseObject);
+						}
+					}
+				}
+				operationInfo.addResponse(operationResponse);
 			}
 		}
 	}

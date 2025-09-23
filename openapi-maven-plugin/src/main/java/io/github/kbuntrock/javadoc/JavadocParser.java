@@ -11,7 +11,6 @@ import com.github.javaparser.ast.body.EnumConstantDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.comments.JavadocComment;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
@@ -87,8 +86,8 @@ public class JavadocParser {
 				logger.debug("Class documentation for : " + classDocumentation.getCompleteName());
 				logger.debug("Summary : " + classDocumentation.getSummary());
 				logger.debug("Description : " + classDocumentation.getDescription());
-				if(!classDocumentation.getMethodsJavadoc().isEmpty()) {
-					for(final Entry<String, JavadocWrapper> entry : classDocumentation.getMethodsJavadoc().entrySet()) {
+				if(!classDocumentation.getMethodsJavadocByIdentifier().isEmpty()) {
+					for(final Entry<String, JavadocWrapper> entry : classDocumentation.getMethodsJavadocByIdentifier().entrySet()) {
 						logger.debug("Method doc for : " + entry.getKey());
 						logger.debug("Summary : " + entry.getValue().getSummary());
 						logger.debug("Description : " + entry.getValue().getDescription());
@@ -134,12 +133,12 @@ public class JavadocParser {
 		} else if(commentedNode.hasParentNode() && commentedNode.getParentNode().get() instanceof ClassOrInterfaceDeclaration) {
 			classDeclaration = (ClassOrInterfaceDeclaration) commentedNode.getParentNode().get();
 		}
-		if(classDeclaration != null) {
+		if(classDeclaration != null && classDeclaration.getFullyQualifiedName().isPresent()) {
 			final ClassOrInterfaceDeclaration dec = classDeclaration;
 			return Optional.of(javadocMap.computeIfAbsent(dec.getFullyQualifiedName().get(),
 				key -> new ClassDocumentation(dec.getFullyQualifiedName().get(), dec.getName().asString())));
 		}
-		if(commentedNode instanceof RecordDeclaration) {
+		if(commentedNode instanceof RecordDeclaration && ((RecordDeclaration) commentedNode).getFullyQualifiedName().isPresent()) {
 			final String fullName = ((RecordDeclaration) commentedNode).getFullyQualifiedName().get();
 			final RecordDeclaration dec = (RecordDeclaration) commentedNode;
 			return Optional.of(javadocMap.computeIfAbsent(fullName,
@@ -152,7 +151,7 @@ public class JavadocParser {
 		} else if(commentedNode.hasParentNode() && commentedNode.getParentNode().get() instanceof EnumDeclaration) {
 			enumDeclaration = (EnumDeclaration) commentedNode.getParentNode().get();
 		}
-		if(enumDeclaration != null) {
+		if(enumDeclaration != null && enumDeclaration.getFullyQualifiedName().isPresent()) {
 			final EnumDeclaration dec = enumDeclaration;
 			return Optional.of(javadocMap.computeIfAbsent(dec.getFullyQualifiedName().get(),
 				key -> new ClassDocumentation(dec.getFullyQualifiedName().get(), dec.getName().asString())));
@@ -203,15 +202,8 @@ public class JavadocParser {
 							break;
 						case METHOD:
 							final MethodDeclaration methodDeclaration = (MethodDeclaration) comment.getCommentedNode().get();
-							final StringBuilder sb = new StringBuilder();
-							sb.append(methodDeclaration.getType().asString());
-							sb.append("_");
-							sb.append(methodDeclaration.getName().asString());
-							for(final Parameter parameter : methodDeclaration.getParameters()) {
-								sb.append("_");
-								sb.append(parameter.getType().asString());
-							}
-							classDocumentation.get().getMethodsJavadoc().put(sb.toString(), new JavadocWrapper(javadoc));
+							JavadocWrapper wrapper = new JavadocWrapper(javadoc);
+							classDocumentation.get().getMethodsJavadocByIdentifier().put(methodDeclaration.getSignature().toString(), wrapper);
 							break;
 					}
 				}

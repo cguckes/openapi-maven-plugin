@@ -7,19 +7,21 @@ import io.github.kbuntrock.configuration.CommonApiConfiguration;
 import io.github.kbuntrock.configuration.library.reader.AstractLibraryReader;
 import io.github.kbuntrock.model.Tag;
 import io.github.kbuntrock.utils.Logger;
+
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
+
+import io.github.kbuntrock.utils.OpenApiTypeResolver;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
+import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
 
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 
 /**
@@ -36,8 +38,8 @@ public class JavaClassAnalyser {
 
 	private final ScanResult classScanResult;
 
-	public JavaClassAnalyser(final ApiConfiguration apiConfiguration, ScanResult classScanResult) {
-		this.libraryReader = apiConfiguration.getLibrary().createReader(apiConfiguration);
+	public JavaClassAnalyser(final ApiConfiguration apiConfiguration, ScanResult classScanResult, final OpenApiTypeResolver openApiTypeResolver) {
+		this.libraryReader = apiConfiguration.getLibrary().createReader(apiConfiguration, openApiTypeResolver);
 		this.classScanResult = classScanResult;
 
 		// Compilation of white list / black list patterns
@@ -83,16 +85,10 @@ public class JavaClassAnalyser {
 		return returnTypeName;
 	}
 
-	public static String createIdentifier(final Method method) {
-		final StringBuilder sb = new StringBuilder();
-		sb.append(createTypeIdentifier(method.getGenericReturnType().getTypeName()));
-		sb.append("_");
-		sb.append(method.getName());
-		for(final Parameter parameter : method.getParameters()) {
-			sb.append("_");
-			sb.append(createTypeIdentifier(parameter.getParameterizedType().getTypeName()));
-		}
-		return sb.toString();
+	public static String createMethodIdentifier(final Method method) {
+		return Arrays.stream(method.getParameters())
+				.map(p -> StringUtils.defaultString(p.getType().getSimpleName()))
+				.collect(joining(", ", method.getName() + "(", ")"));
 	}
 
 	/**
@@ -107,6 +103,21 @@ public class JavaClassAnalyser {
 		logger.debug("Parsing tag : " + tag.getName());
 
 		final MergedAnnotations mergedAnnotations = MergedAnnotations.from(clazz, MergedAnnotations.SearchStrategy.TYPE_HIERARCHY);
+
+		// Read swagger tag annotation
+		MergedAnnotation<Annotation> swaggerTag = mergedAnnotations.get("io.swagger.v3.oas.annotations.tags.Tag");
+		if(swaggerTag.isPresent()) {
+			final String tagName = swaggerTag.getString("name");
+			if (!StringUtils.isEmpty(tagName)) {
+				tag.setComputedName(tagName);
+			}
+			final String description = swaggerTag.getString("description");
+			if (!StringUtils.isEmpty(description)) {
+				tag.setDescription(description);
+			}
+		}
+
+
 		final List<String> basePaths = libraryReader.readBasePaths(clazz, mergedAnnotations);
 
 		for(final String basePath : basePaths) {

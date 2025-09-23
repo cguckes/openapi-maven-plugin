@@ -14,18 +14,17 @@ import io.github.kbuntrock.configuration.parser.CommonParserUtils;
 import io.github.kbuntrock.configuration.parser.JsonParserUtils;
 import io.github.kbuntrock.javadoc.ClassDocumentation;
 import io.github.kbuntrock.javadoc.ClassDocumentation.EnhancementType;
-import io.github.kbuntrock.javadoc.JavadocMap;
 import io.github.kbuntrock.javadoc.JavadocWrapper;
 import io.github.kbuntrock.model.DataObject;
 import io.github.kbuntrock.model.Endpoint;
 import io.github.kbuntrock.model.ParameterObject;
 import io.github.kbuntrock.model.Tag;
+import io.github.kbuntrock.model.annotation.OperationResponse;
 import io.github.kbuntrock.reflection.AdditionnalSchemaLibrary;
 import io.github.kbuntrock.utils.Logger;
 import io.github.kbuntrock.utils.ObjectsUtils;
 import io.github.kbuntrock.utils.OpenApiConstants;
 import io.github.kbuntrock.utils.OpenApiDataType;
-import io.github.kbuntrock.utils.OpenApiTypeResolver;
 import io.github.kbuntrock.utils.ParameterLocation;
 import io.github.kbuntrock.utils.ProduceConsumeUtils;
 import io.github.kbuntrock.yaml.model.Content;
@@ -51,7 +50,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -69,18 +67,17 @@ public class YamlWriter {
 
 	private final ObjectMapper om;
 	private final ApiConfiguration apiConfiguration;
-	private final OpenApiTypeResolver openApiTypeResolver;
+	private final TagLibrary tagLibrary;
 
 	private final MavenProject mavenProject;
 
 	private Optional<JsonNode> freefields = Optional.empty();
 	private Map<String, JsonNode> defaultErrors;
 
-	public YamlWriter(final MavenProject mavenProject, final ApiConfiguration apiConfiguration,
-		final OpenApiTypeResolver openApiTypeResolver) {
-		this.apiConfiguration = apiConfiguration;
+	public YamlWriter(final MavenProject mavenProject, final ApiConfiguration apiConfiguration, final TagLibrary tagLibrary) {
 		this.mavenProject = mavenProject;
-		this.openApiTypeResolver = openApiTypeResolver;
+		this.apiConfiguration = apiConfiguration;
+		this.tagLibrary = tagLibrary;
 		this.om = FILEFORMAT_JSON.equals(apiConfiguration.getFileFormat()) ?
 			new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT) :
 			new ObjectMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
@@ -138,22 +135,27 @@ public class YamlWriter {
 
 		// Write "tags" section (list of all tags presents in this documentation)
 		specification.setTags(tagLibrary.getSortedTags().stream()
-			.map(x -> {
-				if(JavadocMap.INSTANCE.isPresent()) {
-					ClassDocumentation classDocumentation = JavadocMap.INSTANCE.getJavadocMap()
-						.computeIfAbsent(x.getClazz().getCanonicalName(),
+			.map(tag -> {
+				if(tagLibrary.hasJavadocMap() && tag.getDescription() == null) {
+					ClassDocumentation classDocumentation = tagLibrary.getJavadocMap()
+						.computeIfAbsent(tag.getClazz().getCanonicalName(),
 							k -> new ClassDocumentation(x.getClazz().getCanonicalName(), x.getClazz().getSimpleName()));
 					// Even if there is no declared class documentation, we may enhance it with javadoc on interface and/or abstract classes
-					logger.debug("Class documentation found for tag " + x.getClazz().getSimpleName());
+					if(classDocumentation == null) {
+						classDocumentation = new ClassDocumentation(tag.getClazz().getCanonicalName(), tag.getClazz().getSimpleName());
+						tagLibrary.getJavadocMap().put(tag.getClazz().getCanonicalName(), classDocumentation);
+					}
+					logger.debug(
+						"Class documentation found for tag " + tag.getClazz().getSimpleName() + " ? " + (classDocumentation != null));
 
-					classDocumentation.inheritanceEnhancement(x.getClazz(), ClassDocumentation.EnhancementType.METHODS);
+					classDocumentation.inheritanceEnhancement(tag.getClazz(), ClassDocumentation.EnhancementType.METHODS, tagLibrary.getJavadocMap());
 					return new TagElement(
-						x.computeConfiguredName(apiConfiguration),
+						tag.computeConfiguredName(apiConfiguration),
 						classDocumentation.getSummary().orElse(null),
 						classDocumentation.getDescription().orElse(null));
 				}
 
-				return new TagElement(x.computeConfiguredName(apiConfiguration), null, null);
+				return new TagElement(tag.computeConfiguredName(apiConfiguration), tag.getDescription());
 			}).collect(Collectors.toList()));
 
 		// Write the "paths" section (all url / http verbs combination scanned)
@@ -202,8 +204,8 @@ public class YamlWriter {
 
 		for(final Tag tag : tagLibrary.getSortedTags()) {
 
-			final ClassDocumentation classDocumentation = JavadocMap.INSTANCE.isPresent() ?
-				JavadocMap.INSTANCE.getJavadocMap().get(tag.getClazz().getCanonicalName()) : null;
+			final ClassDocumentation classDocumentation = tagLibrary.hasJavadocMap() ?
+				tagLibrary.getJavadocMap().get(tag.getClazz().getCanonicalName()) : null;
 
 			logger.debug(
 				"Class documentation found for tag paths section " + tag.getClazz().getSimpleName() + " ? " + (classDocumentation != null));
@@ -236,7 +238,7 @@ public class YamlWriter {
 				// Javadoc to description
 				JavadocWrapper methodJavadoc = null;
 				if(classDocumentation != null) {
-					methodJavadoc = classDocumentation.getMethodsJavadoc().get(endpoint.getIdentifier());
+					methodJavadoc = classDocumentation.getMethodsJavadocByIdentifier().get(endpoint.getIdentifier());
 					if(methodJavadoc != null) {
 						methodJavadoc.sortTags();
 					}
@@ -285,7 +287,7 @@ public class YamlWriter {
 					parameterElement.setRequired(parameter.isRequired());
 					parameterElement.setAllowEmptyValue(parameter.isAllowEmptyValue());
 
-					final Property schema = new Property(Content.fromDataObject(parameter).getSingleSchema());
+					final Property schema = new Property(Content.fromDataObject(parameter, tagLibrary).getSingleSchema());
 
 					// array in path parameters are not supported
 					if(OpenApiDataType.ARRAY == parameter.getOpenApiResolvedType().getType()
@@ -316,10 +318,10 @@ public class YamlWriter {
 					}
 					// Case where parameter is extracted from a dto (see SpringMvcReader#bindDtoToQueryParams)
 					if(parameter.getJavadocFieldClassName() != null) {
-						final ClassDocumentation queryParamBindingClassDoc = JavadocMap.INSTANCE.isPresent() ?
-							JavadocMap.INSTANCE.getJavadocMap().get(parameter.getJavadocFieldClassName()) : null;
+						final ClassDocumentation queryParamBindingClassDoc = tagLibrary.hasJavadocMap() ?
+								tagLibrary.getJavadocMap().get(parameter.getJavadocFieldClassName()) : null;
 						if(queryParamBindingClassDoc != null) {
-							queryParamBindingClassDoc.inheritanceEnhancement(parameter.getJavaClass(), EnhancementType.BOTH);
+							queryParamBindingClassDoc.inheritanceEnhancement(parameter.getJavaClass(), EnhancementType.BOTH, tagLibrary.getJavadocMap());
 
 							final JavadocWrapper javadocParamWrapper = queryParamBindingClassDoc.getFieldsJavadoc()
 								.get(parameterElement.getName());
@@ -350,8 +352,8 @@ public class YamlWriter {
 
 					final ParameterObject body = bodies.get(0);
 					final Content requestBodyContent = isFormData(bodies)
-						? Content.fromMultipartBodies(bodies)
-						: Content.fromDataObject(body);
+						? Content.fromMultipartBodies(bodies, tagLibrary)
+						: Content.fromDataObject(body, tagLibrary);
 
 					if(body.getFormats() != null) {
 						for(final String format : body.getFormats()) {
@@ -388,7 +390,7 @@ public class YamlWriter {
 					} else {
 						final RequestBody requestBody = new RequestBody();
 						operation.setRequestBody(requestBody);
-						final Content requestBodyContent = Content.fromMultipartFormData(bodyParts, methodJavadoc);
+						final Content requestBodyContent = Content.fromMultipartFormData(bodyParts, methodJavadoc, tagLibrary);
 						requestBody.getContent().put("multipart/form-data", requestBodyContent);
 					}
 
@@ -401,7 +403,7 @@ public class YamlWriter {
 				final Response response = new Response();
 				response.setCode(endpoint.getResponseCode(), apiConfiguration.getDefaultSuccessfulOperationDescription());
 				if(endpoint.getResponseObject() != null) {
-					final Content responseContent = Content.fromDataObject(endpoint.getResponseObject());
+					final Content responseContent = Content.fromDataObject(endpoint.getResponseObject(), tagLibrary);
 					if(endpoint.getResponseFormats() != null) {
 						for(final String format : endpoint.getResponseFormats()) {
 							response.getContent().put(format, responseContent);
@@ -434,6 +436,33 @@ public class YamlWriter {
 						operation.getResponses().put(entry.getKey(), entry.getValue());
 					});
 				}
+
+				// Add swagger documented responses
+				for (final OperationResponse operationResponse : endpoint.getOperationAnnotationInfo().getResponses()) {
+					// Check if response code is already documented, if so, we merge the attributes
+					Response annotatedResponse = null;
+					Object additionalResponseObject = operation.getResponses().get(operationResponse.getCode());
+					if (additionalResponseObject != null && additionalResponseObject instanceof Response) {
+						annotatedResponse = (Response) additionalResponseObject;
+					} else {
+						annotatedResponse = new Response();
+					}
+
+					annotatedResponse.setCode(operationResponse.getCode(), apiConfiguration.getDefaultSuccessfulOperationDescription());
+					if (operationResponse.getDescription() != null) {
+						annotatedResponse.setDescription(operationResponse.getDescription());
+					}
+					if (operationResponse.getDataObject() != null) {
+						final Content responseContent = Content.fromDataObject(operationResponse.getDataObject(), tagLibrary);
+						if (apiConfiguration.isDefaultProduceConsumeGuessing()) {
+							annotatedResponse.getContent().put(ProduceConsumeUtils.getDefaultValue(operationResponse.getDataObject()), responseContent);
+						} else {
+							annotatedResponse.getContent().put("*/*", responseContent);
+						}
+					}
+					operation.getResponses().put(annotatedResponse.getCode(), annotatedResponse);
+				}
+
 				// Check if on operation already exist for this name (GET / POST / ...) and path
 				// If a similar operation exists, we could merge it if the return content type don't overlap.
 				mergeCommonOperations(tag, paths, operation, response);
@@ -516,14 +545,14 @@ public class YamlWriter {
 		final Map<String, Object> schemas = new LinkedHashMap<>();
 		for(final DataObject dataObject : ordered) {
 			final Set<String> exploredSignatures = new HashSet<>();
-			final Schema schema = new Schema(dataObject, true, exploredSignatures, null, null);
+			final Schema schema = new Schema(dataObject, true, exploredSignatures, null, null, tagLibrary);
 			schemas.put(dataObject.getOpenApiResolvedType().isCompleteNode() ? dataObject.getOpenApiResolvedType().getModelName()
 				: dataObject.getSchemaReferenceName(), schema);
 		}
 		// Add the additional eventual recursive entries.
 		for(final Map.Entry<String, DataObject> entry : AdditionnalSchemaLibrary.getMap().entrySet()) {
 			final Set<String> exploredSignatures = new HashSet<>();
-			final Schema schema = new Schema(entry.getValue(), true, exploredSignatures, null, null);
+			final Schema schema = new Schema(entry.getValue(), true, exploredSignatures, null, null, tagLibrary);
 			schemas.put(entry.getKey(), schema);
 		}
 		return schemas;
