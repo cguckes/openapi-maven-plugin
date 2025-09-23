@@ -9,11 +9,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 public class ApiConfiguration extends CommonApiConfiguration {
 
 	private static final String DEFAULT_FILENAME = "spec-open-api.yml";
-	/**
-	 * A list of location to find api endpoints. A location could be a class or a package
-	 */
-	@Parameter(required = true)
-	private List<String> locations;
+
 	@Parameter
 	private String filename = DEFAULT_FILENAME;
 
@@ -22,14 +18,6 @@ public class ApiConfiguration extends CommonApiConfiguration {
 	private boolean mergeFreeFields;
 
 	private OperationIdHelper operationIdHelper;
-
-	public List<String> getLocations() {
-		return locations;
-	}
-
-	public void setLocations(final List<String> locations) {
-		this.locations = locations;
-	}
 
 	public String getFilename() {
 		return filename;
@@ -69,6 +57,7 @@ public class ApiConfiguration extends CommonApiConfiguration {
 		final CommonApiConfiguration copy = new CommonApiConfiguration(commonApiConfiguration);
 		final ApiConfiguration merged = new ApiConfiguration();
 		// Copy properties
+		merged.locations = copy.locations;
 		merged.tag = copy.tag;
 		merged.operation = copy.operation;
 		merged.attachArtifact = copy.attachArtifact;
@@ -78,13 +67,17 @@ public class ApiConfiguration extends CommonApiConfiguration {
 		merged.pathPrefix = copy.pathPrefix;
 		merged.fileFormat = copy.fileFormat;
 		merged.loopbackOperationName = copy.loopbackOperationName;
+		merged.enumListDescriptionEnabled = copy.enumListDescriptionEnabled;
+		merged.enumNameExtensionEnabled = copy.enumNameExtensionEnabled;
+		merged.enumNameExtensionValue = copy.enumNameExtensionValue;
+		merged.enumDescriptionExtensionEnabled = copy.enumDescriptionExtensionEnabled;
+		merged.enumDescriptionExtensionValue = copy.enumDescriptionExtensionValue;
 		merged.operationId = copy.operationId;
 		merged.freeFields = copy.freeFields;
 		merged.library = copy.library;
 		merged.tagAnnotations = copy.tagAnnotations;
 		merged.whiteList = copy.whiteList;
 		merged.blackList = copy.blackList;
-		merged.enumConfigList = copy.enumConfigList;
 		merged.extraSchemaClasses = copy.extraSchemaClasses;
 		merged.customResponseTypeAnnotation = copy.customResponseTypeAnnotation;
 		merged.defaultErrors = copy.defaultErrors;
@@ -96,10 +89,12 @@ public class ApiConfiguration extends CommonApiConfiguration {
 		merged.nonDocumentableParameterClasses = copy.nonDocumentableParameterClasses;
 		// End copy properties
 
-		merged.setLocations(locations);
 		merged.setFilename(filename);
 		merged.setMergeFreeFields(mergeFreeFields);
 
+		if(locations != null && !locations.isEmpty()) {
+			merged.setLocations(locations);
+		}
 		if(!tag.getSubstitutions().isEmpty()) {
 			merged.getTag().setSubstitutions(tag.getSubstitutions());
 		}
@@ -129,6 +124,21 @@ public class ApiConfiguration extends CommonApiConfiguration {
 		}
 		if(loopbackOperationName != null) {
 			merged.setLoopbackOperationName(loopbackOperationName);
+		}
+		if(enumListDescriptionEnabled != null) {
+			merged.setEnumListDescriptionEnabled(enumListDescriptionEnabled);
+		}
+		if(enumNameExtensionEnabled != null) {
+			merged.setEnumNameExtensionEnabled(enumNameExtensionEnabled);
+		}
+		if(enumNameExtensionValue != null) {
+			merged.setEnumNameExtensionValue(enumNameExtensionValue);
+		}
+		if(enumDescriptionExtensionEnabled != null) {
+			merged.setEnumDescriptionExtensionEnabled(enumDescriptionExtensionEnabled);
+		}
+		if(enumDescriptionExtensionValue != null) {
+			merged.setEnumDescriptionExtensionValue(enumDescriptionExtensionValue);
 		}
 		if(operationId != null) {
 			merged.setOperationId(operationId);

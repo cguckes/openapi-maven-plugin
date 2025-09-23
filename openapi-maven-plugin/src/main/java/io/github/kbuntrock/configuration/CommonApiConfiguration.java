@@ -21,6 +21,12 @@ public class CommonApiConfiguration {
 		DEFAULT_TAG_ANNOTATIONS.add(TagAnnotation.SPRING_REST_CONTROLLER.getAnnotationClassName());
 	}
 
+	/**
+	 * A list of location to find api endpoints. A location could be a class or a package
+	 */
+	@Parameter
+	protected List<String> locations;
+
 	@Parameter
 	protected Tag tag = new Tag();
 
@@ -57,11 +63,43 @@ public class CommonApiConfiguration {
 	protected String fileFormat;
 
 	/**
-	 * If true, return a short operation name for code generation, as described here :
+	 * If true, return a short operation name for code generation, as described here:
 	 * https://loopback.io/doc/en/lb4/Decorators_openapi.html
 	 */
 	@Parameter
 	protected Boolean loopbackOperationName;
+
+	/**
+	 * Write in the description the complete list of enum value / description
+	 */
+	@Parameter
+	protected Boolean enumListDescriptionEnabled;
+	/**
+     * If true, add an enum name for all enums described by values
+	 * See https://openapi-generator.tech/docs/templating/#all-generators-core
+     */
+	@Parameter
+	protected Boolean enumNameExtensionEnabled;
+	/**
+	 * Define the enumeration name string if the above parameter is true
+	 * Default is "x-enum-varnames"
+	 */
+	@Parameter
+	protected String enumNameExtensionValue;
+
+	/**
+	 * If true, add an enum description for all enums described by values
+	 * See https://openapi-generator.tech/docs/templating/#all-generators-core
+	 */
+	@Parameter
+	protected Boolean enumDescriptionExtensionEnabled;
+
+	/**
+	 * Define the enumeration description string if the above parameter is true
+	 * Default is "x-enum-descriptions"
+	 */
+	@Parameter
+	protected String enumDescriptionExtensionValue;
 
 	@Parameter
 	protected Boolean defaultNonNullableFields;
@@ -91,9 +129,6 @@ public class CommonApiConfiguration {
 	protected List<String> blackList;
 
 	@Parameter
-	protected List<EnumConfig> enumConfigList = new ArrayList<>();
-
-	@Parameter
 	protected List<String> extraSchemaClasses = new ArrayList<>();
 
 	@Parameter
@@ -115,6 +150,10 @@ public class CommonApiConfiguration {
 	}
 
 	public CommonApiConfiguration(final CommonApiConfiguration commonApiConfiguration) {
+		if(commonApiConfiguration.locations != null) {
+			this.locations = new ArrayList<>();
+			this.locations.addAll(commonApiConfiguration.locations);
+		}
 		this.tag = new Tag(commonApiConfiguration.tag);
 		this.operation = new Operation(commonApiConfiguration.operation);
 		this.attachArtifact = commonApiConfiguration.attachArtifact;
@@ -124,6 +163,11 @@ public class CommonApiConfiguration {
 		this.pathPrefix = commonApiConfiguration.pathPrefix;
 		this.fileFormat = commonApiConfiguration.fileFormat;
 		this.loopbackOperationName = commonApiConfiguration.loopbackOperationName;
+		this.enumListDescriptionEnabled = commonApiConfiguration.enumListDescriptionEnabled;
+		this.enumNameExtensionEnabled = commonApiConfiguration.enumNameExtensionEnabled;
+		this.enumNameExtensionValue = commonApiConfiguration.enumNameExtensionValue;
+		this.enumDescriptionExtensionEnabled = commonApiConfiguration.enumDescriptionExtensionEnabled;
+		this.enumDescriptionExtensionValue = commonApiConfiguration.enumDescriptionExtensionValue;
 		this.operationId = commonApiConfiguration.operationId;
 		this.freeFields = commonApiConfiguration.freeFields;
 		this.library = commonApiConfiguration.library;
@@ -153,9 +197,6 @@ public class CommonApiConfiguration {
 			this.nullableAnnotation = new ArrayList<>();
 			this.nullableAnnotation.addAll(commonApiConfiguration.nullableAnnotation);
 		}
-		for(final EnumConfig enumConfig : commonApiConfiguration.enumConfigList) {
-			this.enumConfigList.add(new EnumConfig(enumConfig));
-		}
 		if(!commonApiConfiguration.extraSchemaClasses.isEmpty()) {
 			this.extraSchemaClasses.addAll(commonApiConfiguration.extraSchemaClasses);
 		}
@@ -183,6 +224,21 @@ public class CommonApiConfiguration {
 		if(loopbackOperationName == null) {
 			loopbackOperationName = true;
 		}
+		if(enumListDescriptionEnabled == null) {
+			enumListDescriptionEnabled = true;
+		}
+		if(enumNameExtensionEnabled == null) {
+			enumNameExtensionEnabled = true;
+		}
+		if(enumNameExtensionValue == null) {
+			enumNameExtensionValue = "x-enum-varnames";
+		}
+		if(enumDescriptionExtensionEnabled == null) {
+			enumDescriptionExtensionEnabled = true;
+		}
+		if(enumDescriptionExtensionValue == null) {
+			enumDescriptionExtensionValue = "x-enum-descriptions";
+		}
 		if(pathEnhancement == null) {
 			pathEnhancement = true;
 		}
@@ -198,6 +254,14 @@ public class CommonApiConfiguration {
 		if(attachArtifact == null) {
 			attachArtifact = true;
 		}
+	}
+
+	public List<String> getLocations() {
+		return locations;
+	}
+
+	public void setLocations(List<String> locations) {
+		this.locations = locations;
 	}
 
 	public Tag getTag() {
@@ -272,6 +336,46 @@ public class CommonApiConfiguration {
 		this.loopbackOperationName = loopbackOperationName;
 	}
 
+	public Boolean getEnumListDescriptionEnabled() {
+		return enumListDescriptionEnabled;
+	}
+
+	public void setEnumListDescriptionEnabled(Boolean enumListDescriptionEnabled) {
+		this.enumListDescriptionEnabled = enumListDescriptionEnabled;
+	}
+
+	public Boolean getEnumNameExtensionEnabled() {
+		return enumNameExtensionEnabled;
+	}
+
+	public void setEnumNameExtensionEnabled(Boolean enumNameExtensionEnabled) {
+		this.enumNameExtensionEnabled = enumNameExtensionEnabled;
+	}
+
+	public String getEnumNameExtensionValue() {
+		return enumNameExtensionValue;
+	}
+
+	public void setEnumNameExtensionValue(String enumNameExtensionValue) {
+		this.enumNameExtensionValue = enumNameExtensionValue;
+	}
+
+	public Boolean getEnumDescriptionExtensionEnabled() {
+		return enumDescriptionExtensionEnabled;
+	}
+
+	public void setEnumDescriptionExtensionEnabled(Boolean enumDescriptionExtensionEnabled) {
+		this.enumDescriptionExtensionEnabled = enumDescriptionExtensionEnabled;
+	}
+
+	public String getEnumDescriptionExtensionValue() {
+		return enumDescriptionExtensionValue;
+	}
+
+	public void setEnumDescriptionExtensionValue(String enumDescriptionExtensionValue) {
+		this.enumDescriptionExtensionValue = enumDescriptionExtensionValue;
+	}
+
 	public String getOperationId() {
 		return operationId;
 	}
@@ -318,14 +422,6 @@ public class CommonApiConfiguration {
 
 	public void setBlackList(final List<String> blackList) {
 		this.blackList = blackList;
-	}
-
-	public List<EnumConfig> getEnumConfigList() {
-		return enumConfigList;
-	}
-
-	public void setEnumConfigList(final List<EnumConfig> enumConfigList) {
-		this.enumConfigList = enumConfigList;
 	}
 
 	public List<String> getExtraSchemaClasses() {

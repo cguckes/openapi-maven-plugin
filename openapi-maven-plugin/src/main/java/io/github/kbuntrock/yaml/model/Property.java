@@ -3,6 +3,7 @@ package io.github.kbuntrock.yaml.model;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.github.kbuntrock.TagLibrary;
 import io.github.kbuntrock.model.DataObject;
 import java.util.Map;
 import java.util.Set;
@@ -18,15 +19,14 @@ public class Property extends Schema {
 	private Integer maxLength;
 	@JsonIgnore
 	private boolean required;
+	@JsonIgnore
+	private String example;
 
 	@JsonIgnore
 	private DataObject parentDataObject;
 
-	public Property() {
-		super();
-	}
-
 	public Property(final Schema schema) {
+		super(schema.apiConfiguration);
 		this.setProperties(schema.getProperties());
 		this.setAdditionalProperties(schema.getAdditionalProperties());
 		this.setItems(schema.getItems());
@@ -37,8 +37,8 @@ public class Property extends Schema {
 	}
 
 	public Property(final DataObject dataObject, final boolean mainReference, final String name, final Set<String> exploredSignatures,
-		final DataObject parentDataObject) {
-		super(dataObject, mainReference, exploredSignatures, parentDataObject, name);
+					final DataObject parentDataObject, final TagLibrary tagLibrary) {
+		super(dataObject, mainReference, exploredSignatures, parentDataObject, name, tagLibrary);
 		if(dataObject.getClassRequired() != null) {
 			this.setRequired(dataObject.getClassRequired());
 		}
@@ -88,6 +88,18 @@ public class Property extends Schema {
 		if(maxLength != null) {
 			map.put("maxLength", maxLength);
 		}
+		if(example != null) {
+			map.put("example", example);
+		}
+
 		return map;
+	}
+
+	public String getExample() {
+		return example;
+	}
+
+	public void setExample(String example) {
+		this.example = example;
 	}
 }

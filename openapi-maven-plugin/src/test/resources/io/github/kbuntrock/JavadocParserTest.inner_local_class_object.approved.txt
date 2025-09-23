@@ -1,0 +1,44 @@
+---
+openapi: 3.0.3
+info:
+  title: My Project
+  version: 10.5.36
+servers:
+  - url: ""
+tags:
+  - name: InnerAndLocalClassObjectsController
+    description: A controller testing documentation on inner and local classes
+paths:
+  /api/inner-class-object-controller/user:
+    get:
+      tags:
+        - InnerAndLocalClassObjectsController
+      operationId: get
+      description: Get a user by its id
+      parameters:
+        - name: userId
+          description: the user id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        200:
+          description: a user inner class object
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserInnerDto'
+components:
+  schemas:
+    UserInnerDto:
+      description: An inner class object representing a user
+      type: object
+      properties:
+        lastname:
+          description: The last name of the user
+          type: string
+        firstname:
+          description: The first name of the user
+          type: string
