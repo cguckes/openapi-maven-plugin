@@ -7,18 +7,14 @@ public class TagElement {
 	private String name;
 
 	@JsonInclude(JsonInclude.Include.NON_NULL)
-	private String summary;
-
-	@JsonInclude(JsonInclude.Include.NON_NULL)
 	private String description;
 
 	public TagElement() {
 
 	}
 
-	public TagElement(String name, String summary, String description) {
+	public TagElement(String name, String description) {
 		this.name = name;
-		this.summary = summary;
 		this.description = description;
 	}
 
@@ -28,14 +24,6 @@ public class TagElement {
 
 	public void setName(String name) {
 		this.name = name;
-	}
-
-	public String getSummary() {
-		return summary;
-	}
-
-	public void setSummary(String summary) {
-		this.summary = summary;
 	}
 
 	public String getDescription() {

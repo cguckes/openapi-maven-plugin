@@ -7,8 +7,10 @@ servers:
   - url: ""
 tags:
   - name: ChildClassOne
-    summary: The first child
-    description: "A beautiful description of ChildClassOne\r\n\n\r\nSubtitle"
+    description: |-
+      A beautiful description of ChildClassOne
+
+      Subtitle
 paths:
   /api/child-class-one/can-encapsulate:
     get:

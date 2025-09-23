@@ -15,6 +15,8 @@ import java.util.stream.Stream;
 
 public class JavadocElementParser {
 
+	public static final Pattern hrefLinkRegex = Pattern.compile("href=\"(.*?)\"");
+
 	public static Optional<String> getSummary(JavadocDescription description, String endOfLineReplacement) {
 		return processJavadocElements(description, endOfLineReplacement, elements -> elements
 			.filter(onlyTagsOfType(JavadocTag.SUMMARY))
@@ -35,7 +37,8 @@ public class JavadocElementParser {
 			.map(JavadocDescription::getElements)
 			.map(Collection::stream)
 			.map(elementProcessor)
-			.map(s -> s.collect(Collectors.joining("\n")))
+			.map(s -> s.collect(Collectors.joining()))
+			.map(s -> s.replaceAll("\r\n", "\n"))
 			.map(s -> removeNewlinesIfActivated(s, endOfLineReplacement))
 			.filter(text -> !text.isEmpty())
 			.map(String::trim);
@@ -68,8 +71,7 @@ public class JavadocElementParser {
 	}
 
 	private static String toHrefMarkdown(JavadocInlineTag tag) {
-		Pattern p = Pattern.compile("href=\"(.*?)\"");
-		Matcher m = p.matcher(tag.getContent());
+		Matcher m = hrefLinkRegex.matcher(tag.getContent());
 		String url = null;
 		if(m.find()) {
 			url = m.group(1);

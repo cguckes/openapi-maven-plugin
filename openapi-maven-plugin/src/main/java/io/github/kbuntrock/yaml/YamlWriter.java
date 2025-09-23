@@ -139,7 +139,7 @@ public class YamlWriter {
 				if(tagLibrary.hasJavadocMap() && tag.getDescription() == null) {
 					ClassDocumentation classDocumentation = tagLibrary.getJavadocMap()
 						.computeIfAbsent(tag.getClazz().getCanonicalName(),
-							k -> new ClassDocumentation(x.getClazz().getCanonicalName(), x.getClazz().getSimpleName()));
+							k -> new ClassDocumentation(tag.getClazz().getCanonicalName(), tag.getClazz().getSimpleName()));
 					// Even if there is no declared class documentation, we may enhance it with javadoc on interface and/or abstract classes
 					if(classDocumentation == null) {
 						classDocumentation = new ClassDocumentation(tag.getClazz().getCanonicalName(), tag.getClazz().getSimpleName());
@@ -151,7 +151,6 @@ public class YamlWriter {
 					classDocumentation.inheritanceEnhancement(tag.getClazz(), ClassDocumentation.EnhancementType.METHODS, tagLibrary.getJavadocMap());
 					return new TagElement(
 						tag.computeConfiguredName(apiConfiguration),
-						classDocumentation.getSummary().orElse(null),
 						classDocumentation.getDescription().orElse(null));
 				}
 
